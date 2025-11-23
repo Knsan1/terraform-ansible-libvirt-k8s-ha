@@ -1,0 +1,20 @@
+---
+- name: Join additional control-plane nodes
+  hosts: masters
+  become: yes
+  any_errors_fatal: true
+
+  tasks:
+
+    - name: Copy join-controlplane.sh to remote masters (except master-1)
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/join-controlplane.sh"
+        dest: /tmp/join-controlplane.sh
+        mode: '0755'
+      when:
+        - inventory_hostname != 'master-1'
+
+    - name: Run the join-controlplane script
+      ansible.builtin.command: /bin/bash /tmp/join-controlplane.sh
+      when:
+        - inventory_hostname != 'master-1'

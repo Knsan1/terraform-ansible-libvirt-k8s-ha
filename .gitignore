@@ -1,0 +1,2 @@
+ansible/playbooks/*.sh
+ansible/playbooks/kubeconfig-*.yaml

@@ -1,0 +1,28 @@
+---
+k8s_version: "1.33.0"
+k8s_major: "1.33"
+
+# Network
+kube_interface: ens3
+kube_vip_address: 192.168.1.10
+pod_cidr: 10.244.0.0/16
+service_cidr: 10.96.0.0/12
+
+# Keepalived
+vrrp_router_id: 51
+keepalived_password: "K8sHA2025ChangeMe!"
+
+
+#####################################################################
+# Cilium configuration
+#####################################################################
+cilium_cli_version: "0.18.3"  # Adjust to desired CLI version
+cilium_version: "1.18.0"      # The version of Cilium to deploy
+
+#####################################################################
+# MetalLB configuration
+#####################################################################
+
+metallb_version: "v0.14.5"
+metallb_address_pool:
+  - "192.168.1.240-192.168.1.250"

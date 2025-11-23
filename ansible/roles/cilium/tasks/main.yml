@@ -1,0 +1,70 @@
+- name: Download Cilium CLI binary archive
+  ansible.builtin.get_url:
+    url: "https://github.com/cilium/cilium-cli/releases/download/v{{ cilium_cli_version }}/cilium-linux-amd64.tar.gz"
+    dest: /tmp/cilium.tar.gz
+    mode: '0644'
+  become: true
+
+- name: Extract Cilium CLI binary
+  ansible.builtin.unarchive:
+    src: /tmp/cilium.tar.gz
+    dest: /usr/local/bin/
+    remote_src: true
+    mode: '0755'
+  become: true
+
+- name: Rename extracted CLI to 'cilium'
+  ansible.builtin.command: mv /usr/local/bin/cilium-linux-amd64 /usr/local/bin/cilium
+  args:
+    removes: /usr/local/bin/cilium-linux-amd64
+  become: true
+
+- name: Ensure cilium binary is executable
+  ansible.builtin.file:
+    path: /usr/local/bin/cilium
+    mode: '0755'
+  become: true
+
+- name: Verify Cilium CLI installed
+  ansible.builtin.command: /usr/local/bin/cilium version
+  register: cilium_cli_version_check
+  changed_when: false
+  become: true
+
+#####################################################################
+# Install Cilium
+#####################################################################
+
+- name: Install Cilium with extended wait time
+  ansible.builtin.shell: |
+    # The command itself still uses its internal 5-minute timeout for --wait
+    cilium install --version {{ cilium_version }} --wait
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  # Tell Ansible to run the command in the background for up to 1200 seconds (20 mins)
+  # and check the result every 10 seconds.
+  async: 1200 
+  poll: 10
+  become: true
+  ignore_errors: true
+
+
+#####################################################################
+# Validate
+#####################################################################
+
+- name: Wait for Cilium pods to become ready
+  ansible.builtin.command: >
+    kubectl -n kube-system wait --for=condition=Ready pod -l k8s-app=cilium --timeout=300s
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+
+- name: Run Cilium status
+  ansible.builtin.command: 
+    cmd: /usr/local/bin/cilium status 
+  environment:
+    # THIS IS THE MISSING PIECE for the Cilium CLI to connect to the API server
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+  become: true

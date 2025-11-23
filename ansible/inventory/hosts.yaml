@@ -1,0 +1,32 @@
+all:
+  children:
+    masters:
+      hosts:
+        master-1:
+          ansible_host: 192.168.1.15
+          ansible_user: master-1
+          node_priority: 100
+          node_state: MASTER
+          is_bootstrap: true
+        master-2:
+          ansible_host: 192.168.1.16
+          ansible_user: master-2
+          node_priority: 90
+          node_state: BACKUP
+        master-3:
+          ansible_host: 192.168.1.17
+          ansible_user: master-3
+          node_priority: 80
+          node_state: BACKUP
+      vars:
+        ansible_ssh_common_args: -o StrictHostKeyChecking=no
+    workers:
+      hosts:
+        worker-1:
+          ansible_host: 192.168.1.18
+          ansible_user: worker-1
+        worker-2:
+          ansible_host: 192.168.1.19
+          ansible_user: worker-2
+      vars:
+        ansible_ssh_common_args: -o StrictHostKeyChecking=no

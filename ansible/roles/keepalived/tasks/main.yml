@@ -1,0 +1,17 @@
+---
+- name: Install keepalived
+  apt:
+    name: keepalived
+    state: present
+
+- name: Deploy keepalived.conf (unicast VRRP)
+  template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+  notify: restart keepalived
+
+- name: Start keepalived
+  systemd:
+    name: keepalived
+    state: started
+    enabled: yes

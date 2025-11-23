@@ -1,0 +1,14 @@
+#cloud-config
+hostname: ${hostname}
+
+users:
+  - name: ${vm_name}
+    groups: sudo
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    ssh_authorized_keys:
+      - [FIRST-SSH-PUBKEY]
+      - [SECOND-SSH-PUBKEY]
+      - ...
+ssh_pwauth: false
+disable_root: true

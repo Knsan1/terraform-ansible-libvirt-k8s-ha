@@ -1,0 +1,6 @@
+---
+- name: Deploy Keepalived VRRP (rock-solid VIP)
+  hosts: masters
+  become: yes
+  roles:
+    - keepalived

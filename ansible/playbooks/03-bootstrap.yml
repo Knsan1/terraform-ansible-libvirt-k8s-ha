@@ -1,0 +1,16 @@
+---
+- name: Bootstrap first control-plane node (only master-1)
+  hosts: masters
+  become: yes
+  any_errors_fatal: true
+  tasks:
+    - name: Run bootstrap role only on node that has is_bootstrap=true
+      include_role:
+        name: bootstrap
+      when: is_bootstrap | default(false) | bool
+
+    - name: Save join commands into hostvars so other playbooks can use them
+      set_fact:
+        join_worker_cmd: "{{ hostvars['master-1'].worker_join_cmd | default('') }}"
+        join_controlplane_cmd: "{{ hostvars['master-1'].cp_join_cmd | default('') }}"
+      when: is_bootstrap | default(false) | bool

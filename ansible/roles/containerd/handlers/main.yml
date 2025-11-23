@@ -1,0 +1,10 @@
+- name: restart containerd
+  systemd:
+    name: containerd
+    state: restarted
+
+- name: wait containerd
+  wait_for:
+    path: /run/containerd/containerd.sock
+    state: present
+    timeout: 60

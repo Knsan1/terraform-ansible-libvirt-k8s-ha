@@ -1,0 +1,8 @@
+---
+- name: Full system preparation + containerd + k8s tools
+  hosts: all
+  become: yes
+  roles:
+    - common      # swap off, modules, sysctl, upgrade
+    - containerd  # containerd.io + perfect config
+    - k8s-tools   # kubeadm, kubelet, kubectl 1.33.0

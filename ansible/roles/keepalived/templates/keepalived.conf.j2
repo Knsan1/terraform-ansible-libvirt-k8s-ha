@@ -1,0 +1,33 @@
+global_defs { router_id K8S_HA }
+
+vrrp_script chk_apiserver {
+    script "curl -sfk https://127.0.0.1:6443/healthz"
+    interval 2
+    weight 2
+}
+
+vrrp_instance VI_1 {
+    state {{ node_state }}
+    interface {{ kube_interface }}
+    virtual_router_id {{ vrrp_router_id }}
+    priority {{ node_priority }}
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass {{ keepalived_password }}
+    }
+    unicast_src_ip {{ ansible_default_ipv4.address }}
+    unicast_peer {
+{% for host in groups['masters'] %}
+{% if host != inventory_hostname %}
+      {{ hostvars[host].ansible_default_ipv4.address }}
+{% endif %}
+{% endfor %}
+    }
+    virtual_ipaddress {
+        {{ kube_vip_address }}/24 dev {{ kube_interface }} label {{ kube_interface }}:kvip
+    }
+    track_script {
+        chk_apiserver
+    }
+}

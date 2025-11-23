@@ -1,0 +1,37 @@
+---
+- name: Install MetalLB manifest
+  ansible.builtin.shell: |
+    kubectl apply -f "https://raw.githubusercontent.com/metallb/metallb/{{ metallb_version }}/config/manifests/metallb-native.yaml"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  become: true
+
+- name: Wait for MetalLB controller deployment
+  ansible.builtin.shell: |
+    kubectl -n metallb-system wait --for=condition=Available deployment/controller --timeout=300s
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  become: true
+  ignore_errors: true
+
+- name: Configure MetalLB IPAddressPool and L2Advertisement
+  ansible.builtin.shell: |
+    cat <<EOF | kubectl apply -f -
+    apiVersion: metallb.io/v1beta1
+    kind: IPAddressPool
+    metadata:
+      name: pool-1
+      namespace: metallb-system
+    spec:
+      addresses:
+      - {{ metallb_address_pool[0] }}
+    ---
+    apiVersion: metallb.io/v1beta1
+    kind: L2Advertisement
+    metadata:
+      name: adv-1
+      namespace: metallb-system
+    EOF
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  become: true

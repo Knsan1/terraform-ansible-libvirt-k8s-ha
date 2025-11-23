@@ -1,0 +1,16 @@
+---
+- name: Join worker nodes
+  hosts: workers
+  become: yes
+  any_errors_fatal: true
+
+  tasks:
+
+    - name: Copy join-worker.sh to remote worker node
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/join-worker.sh"
+        dest: /tmp/join-worker.sh
+        mode: '0755'
+
+    - name: Execute join-worker script
+      ansible.builtin.command: /bin/bash /tmp/join-worker.sh

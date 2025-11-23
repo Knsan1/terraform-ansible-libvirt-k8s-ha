@@ -1,0 +1,17 @@
+# Ignore Terraform state
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# Ignore cloud-init and network configs (if you use templating or keep secrets)
+cloud-init/*.cfg
+cloud-init/*.yaml
+cloud-init/*.tmpl
+network-config/*.yaml
+network-config/*.tmpl
+
+# Optional: ignore generic config files
+*.bak
+*.log
+*.swp

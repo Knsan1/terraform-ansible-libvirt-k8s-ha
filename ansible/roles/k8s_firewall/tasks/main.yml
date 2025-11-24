@@ -1,0 +1,114 @@
+---
+# roles/k8s_firewall/tasks/main.yml
+# FINAL VERSION: Incorporates node_cidr, pod_cidr, and MetalLB/Cilium BGP port.
+
+- name: 1. Ensure UFW is installed
+  ansible.builtin.package:
+    name: ufw
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: 2. Set Default Policies (DENY incoming, ALLOW outgoing)
+  community.general.ufw:
+    direction: "{{ item.dir }}"
+    policy: "{{ item.pol }}"
+  loop:
+    - { dir: incoming, pol: deny }
+    - { dir: outgoing, pol: allow }
+  notify: Reload ufw
+
+- name: 3. Allow SSH (22/TCP) with rate limit
+  community.general.ufw:
+    rule: limit
+    port: "{{ ansible_port | default(22) }}"
+    proto: tcp
+    comment: "SSH Access"
+  notify: Reload ufw
+
+# ----------------------------------------------------
+# --- Ports Required on ALL Nodes (General K8s & Addons) ---
+# ----------------------------------------------------
+
+- name: 4. Allow Kubelet API (10250/TCP)
+  community.general.ufw:
+    rule: allow
+    port: '10250'
+    proto: tcp
+    comment: 'Kubelet API'
+  notify: Reload ufw
+
+- name: 5. Allow NodePort range (30000-32767/TCP+UDP)
+  community.general.ufw:
+    rule: allow
+    port: '30000:32767'
+    proto: "{{ item }}"
+    comment: 'NodePort Range'
+  loop: [tcp, udp]
+  notify: Reload ufw
+
+- name: 6. Allow MetalLB/Cilium BGP port (179/TCP)
+  community.general.ufw:
+    rule: allow
+    port: 179
+    proto: tcp
+    comment: "BGP for MetalLB/Cilium"
+  notify: Reload ufw
+
+# ----------------------------------------------------
+# --- CNI and Host Communication Rules (CIDR Specific) ---
+# ----------------------------------------------------
+
+- name: 7. Allow All Traffic on Node CIDR (Host-to-Host Communication)
+  # Allows hosts (e.g., 192.168.1.x) to talk to each other.
+  community.general.ufw:
+    rule: allow
+    from_ip: "{{ node_cidr }}" 
+    proto: any
+    comment: "Allow Internal Node-to-Node (Host) Comms"
+  notify: Reload ufw
+
+- name: 8. Allow All Traffic on Pod CIDR (Pod-to-Pod Communication)
+  # Allows traffic from one pod subnet (e.g., 10.244.x.x) to reach all nodes.
+  community.general.ufw:
+    rule: allow
+    from_ip: "{{ pod_cidr }}" 
+    proto: any
+    comment: "Allow Pod-to-Pod Traffic (CNI)"
+  notify: Reload ufw
+
+# ----------------------------------------------------
+# --- Control Plane Specific Ports (Master Nodes only) ---
+# ----------------------------------------------------
+
+- name: 9. Allow Control Plane Ports (Master Nodes only)
+  when: is_control_plane is defined and is_control_plane | bool
+  block:
+    - name: Allow Kube API Server (6443/TCP)
+      community.general.ufw:
+        rule: allow
+        port: '6443'
+        proto: tcp
+        comment: 'Kube API Server'
+      notify: Reload ufw
+
+    - name: Allow etcd traffic (2379-2380/TCP)
+      community.general.ufw:
+        rule: allow
+        port: '2379:2380'
+        proto: tcp
+        comment: 'etcd communication'
+      notify: Reload ufw
+
+    - name: Allow Kube Scheduler and Controller Manager (10257/10259 TCP)
+      community.general.ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+        comment: "Kube Controller/Scheduler"
+      loop: [10257, 10259]
+      notify: Reload ufw
+
+- name: 10. Enable UFW (final step)
+  community.general.ufw:
+    state: enabled
+    logging: "on"

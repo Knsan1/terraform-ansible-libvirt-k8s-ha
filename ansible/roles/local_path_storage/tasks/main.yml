@@ -1,0 +1,62 @@
+---
+- name: Ensure ~/.kube directory exists
+  file:
+    path: "{{ ansible_env.HOME }}/.kube"
+    state: directory
+    mode: '0700'
+
+- name: Copy kubeconfig to control node
+  copy:
+    src: "{{ playbook_dir }}/kubeconfig-master-1.yaml"
+    dest: "{{ ansible_env.HOME }}/.kube/config"
+    mode: '0600'
+
+
+- name: Apply local-path-provisioner manifest
+  kubernetes.core.k8s:
+    state: present
+    src: https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.32/deploy/local-path-storage.yaml
+
+- name: Create default StorageClass for local-path
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: storage.k8s.io/v1
+      kind: StorageClass
+      metadata:
+        name: standard
+        annotations:
+          storageclass.kubernetes.io/is-default-class: "true"
+      provisioner: rancher.io/local-path
+      reclaimPolicy: Delete
+      volumeBindingMode: WaitForFirstConsumer
+      allowVolumeExpansion: true
+
+- name: Wait for local-path-storage pods to be ready
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: local-path-storage
+    label_selectors:
+      - app=local-path-provisioner
+  register: lp_pods
+  until: lp_pods.resources | length > 0 and lp_pods.resources[0].status.containerStatuses[0].ready
+  retries: 10
+  delay: 6
+
+- name: Show StorageClasses
+  kubernetes.core.k8s_info:
+    kind: StorageClass
+  register: sc_output
+
+- debug:
+    var: sc_output.resources
+
+- name: Show local-path-provisioner pod logs
+  kubernetes.core.k8s_log:
+    namespace: local-path-storage
+    label_selectors:
+      - app=local-path-provisioner
+  register: lp_logs
+
+- debug:
+    var: lp_logs

@@ -5,3 +5,4 @@
 - import_playbook:  04-join-controlplane.yml
 - import_playbook:  05-join-worker.yml
 - import_playbook:  06-install-cni-cilium-metallb.yml
+- import_playbook:  07-install-storage-class.yml

@@ -2,7 +2,10 @@
 - name: Full system preparation + containerd + k8s tools
   hosts: all
   become: yes
+  vars:
+    is_control_plane: "{{ 'masters' in group_names }}"
   roles:
     - common      # swap off, modules, sysctl, upgrade
+    - k8s_firewall # allowing require firewall 
     - containerd  # containerd.io + perfect config
     - k8s-tools   # kubeadm, kubelet, kubectl 1.33.0

@@ -1,0 +1,7 @@
+---
+# roles/k8s_firewall/handlers/main.yml
+
+- name: Reload ufw
+  community.general.ufw:
+    state: reloaded
+  listen: "Reload ufw"

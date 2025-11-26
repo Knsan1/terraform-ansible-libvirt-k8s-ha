@@ -9,6 +9,53 @@ In this repository, I will be making IaC (Infrastructure as Code) configurations
 * **Cilium** as the Container Network Interface (CNI).
 * **MetalLB** for LoadBalancer type services (on-premise).
 
+## 💡 Core Concepts and Technologies (Toggle for Details)
+
+<details>
+<summary> **HA Control Plane (Keepalived & kube-vip)**</summary>
+
+For **High Availability (HA)**, all three Kubernetes master nodes must serve the API. This is achieved by using a **Virtual IP (VIP)** address (`192.168.1.10`) that floats between the master nodes.
+
+* **Keepalived** is a routing software that provides a basic HA mechanism by managing the VIP.
+* **kube-vip** is a Kubernetes-native tool that integrates with the cluster lifecycle to manage the VIP, ensuring the API server is always reachable even if one master node fails.
+* This approach ensures that the **kubelet** on every node points to the single, consistent VIP for API server communication.
+
+</details>
+
+<details>
+<summary> **Infrastructure as Code (IaC): Terraform and Libvirt**</summary>
+
+**Terraform** is used as the provisioning tool, utilizing the **Libvirt Provider** to interact with the host machine's hypervisor (KVM/QEMU).
+
+* **Libvirt** acts as the virtualization API layer, managing the lifecycle of the virtual machines (VMs).
+* **Terraform** defines the desired state of the VMs (CPU, RAM, network, cloud-init configuration) and uses the Libvirt provider to create them on the host.
+* The VMs are attached to a dedicated, bridged Libvirt network (`k8s-net`).
+
+</details>
+
+<details>
+<summary> **Configuration Management: Ansible**</summary>
+
+**Ansible** is used for post-provisioning configuration and cluster bootstrapping.
+
+* It handles software installation (**Containerd, Kubeadm, Keepalived**).
+* It executes the **`kubeadm init`** command on the first master (bootstrap node).
+* It securely **joins** the secondary master and worker nodes to the cluster using generated join tokens.
+* It handles the deployment of the CNI (**Cilium**) and the LoadBalancer solution (**MetalLB**).
+
+</details>
+
+<details>
+<summary> **Networking Stack: Cilium and MetalLB**</summary>
+
+The cluster utilizes a robust cloud-native networking stack for both pod-to-pod communication and service exposure.
+
+* **Cilium (CNI):** Provides the network overlay for Pod communication, offering advanced features like eBPF-based networking and network policy enforcement.
+* **MetalLB (LoadBalancer):** Since this is an on-premise cluster without a native cloud LoadBalancer, MetalLB provides the **`LoadBalancer`** Service type functionality. It assigns external IP addresses from the specified range (`192.168.1.240-250`) to services, making them accessible from the host's network.
+
+</details>
+
+---
 ## ✨ Key Cluster Configuration Details
 
 | Component | Value | Notes |
@@ -24,9 +71,9 @@ Before trying these in your own machine, please read the requirements and consid
 - This Terraform and Ansible IaC configuration assumes you're in a local network with the subnet of **192.168.1.0/24**, and DNS **8.8.8.8**. If the parameters are different, kindly change them in `config/generate_config.py`.
 - The host machine uses **Libvirt API**, which Terraform uses to interact with, creating, and managing the virtual machines.
 - The Ansible configuration works anywhere, as long as the configuration at `ansible/inventory/group_vars/all.yaml` are properly configured to the correct version.
-- The full instructions and reasonings are explained at https://blog.lgkentang.com/ , this README only shows how to quickstart and provision the cluster.
 
 ---
+
 
 ## 🚀 Prerequisites and Host Setup
 
